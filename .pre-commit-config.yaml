@@ -1,0 +1,23 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace   # Удаляет пробелы в конце строк
+      - id: end-of-file-fixer     # Добавляет пустую строку в конце файлов
+      - id: check-merge-conflict  # Проверяет merge-конфликты
+      - id: debug-statements      # Ищет отладочные print() и pdb.set_trace()
+
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black  # Форматирование кода по PEP8
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8  # Анализ кода на соответствие стандартам
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort  # Сортировка импортов
