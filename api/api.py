@@ -1,22 +1,17 @@
-import django
+from datetime import date
 from typing import List
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import Http404
-from django.shortcuts import get_object_or_404
 from django.db import models
-
-from ninja import NinjaAPI, Router
-from pydantic import BaseModel
-
-from .models import WorkLog, User, Project
-from ninja import Schema
+from django.http import Http404, HttpRequest
+from django.shortcuts import get_object_or_404
+from ninja import NinjaAPI, Router, Schema
 from ninja.security import HttpBearer
+from pydantic import BaseModel
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from django.http import HttpRequest
-from datetime import date
-from ninja.errors import AuthenticationError
+
+from .models import Project, User, WorkLog
 
 api = NinjaAPI(title="Timesheet API")
 
@@ -45,7 +40,6 @@ class ReportSchema(Schema):
 router = Router()
 
 
-#Проекты
 @router.get("/projects/", response=List[ProjectSchema])
 def list_projects(request):
     """Получить список всех проектов"""
@@ -87,11 +81,13 @@ def delete_project(request, project_id: int):
     project.delete()
     return {"success": True}
 
-# Логи
+
 @router.get("/worklogs/", response=List[WorkLogSchema])
 def list_worklogs(request):
     """Получить список всех записей о рабочем времени"""
-    return list(WorkLog.objects.all().values("user_id", "project_id", "hours", "date"))
+    return list(
+        WorkLog.objects.all().values("user_id", "project_id", "hours", "date")
+    )
 
 
 @router.post("/worklogs/")
@@ -104,7 +100,10 @@ def create_worklog(request, payload: WorkLogSchema):
         raise Http404("Пользователь или проект не найдены")
 
     worklog = WorkLog.objects.create(
-        user=user, project=project, hours=payload.hours, date=payload.date
+        user=user,
+        project=project,
+        hours=payload.hours,
+        date=payload.date,
     )
     return {
         "id": worklog.id,
@@ -144,7 +143,7 @@ def delete_worklog(request, worklog_id: int):
     worklog.delete()
     return {"success": True}
 
-# Аутентификация
+
 class JWTAuth(HttpBearer):
     def authenticate(self, request: HttpRequest, token: str):
         jwt_auth = JWTAuthentication()
@@ -155,15 +154,19 @@ class JWTAuth(HttpBearer):
         except (InvalidToken, TokenError):
             return None
 
-# Отчеты
-@router.get("/reports/{project_id}/", response=List[ReportItemSchema], auth=JWTAuth())
+
+@router.get(
+    "/reports/{project_id}/",
+    response=List[ReportItemSchema],
+    auth=JWTAuth(),
+)
 def get_report(request, project_id: int, start_date: date, end_date: date):
     """Генерация отчёта по проекту (по каждому пользователю)"""
     worklogs = (
         WorkLog.objects.filter(
             project_id=project_id,
             date__gte=start_date,
-            date__lt=end_date  # < end_date (не включаем последний день)
+            date__lt=end_date,
         )
         .values("user__id")
         .annotate(total_hours=models.Sum("hours"))
@@ -178,4 +181,3 @@ def get_report(request, project_id: int, start_date: date, end_date: date):
 
 
 api.add_router("/", router)
-

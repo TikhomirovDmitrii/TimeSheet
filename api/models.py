@@ -27,7 +27,7 @@ class WorkLog(models.Model):
     date = models.DateField()
 
     class Meta:
-        unique_together = ('user', 'project', 'date')
+        unique_together = ("user", "project", "date")
 
     def __str__(self):
         return f"{self.user.username} - {self.project.name}: {self.hours}h"
